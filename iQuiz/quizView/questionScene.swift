@@ -1,59 +1,69 @@
-//
-//  questionScene.swift
-//  iQuiz
-//
-//  Created by George Lee on 5/10/25.
-//
-
 import UIKit
 
-class questionScene: UIViewController {
-    
-    
-    var quizTopic: QuizTopic!
-    
-    var questions : [String] = []
-    var answer : Int = 0
-    @IBOutlet weak var quizOptions: UIMenu!
-    
-    @IBOutlet weak var submitButton: UIButton!
+class QuestionScene: UIViewController {
+
+    var quizTitle: String?
+    var quiz: CurrentQuiz?
+
+
+    @IBOutlet weak var questionLabel: UILabel!
     @IBOutlet weak var quizDropdown: UIButton!
-    
-    @IBAction func onSubmit(_ sender: Any) {
-        performSegue(withIdentifier: "showAnswer", sender: self)
-    }
-    
-    
+    @IBOutlet weak var submitButton: UIButton!
+    var selectedAnswerIndex: Int?
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        questions = quizTopic.questions
-        answer = quizTopic.answer
         
+        navigationItem.hidesBackButton = true
+            navigationItem.leftBarButtonItem = UIBarButtonItem(
+                title: "Home",
+                style: .plain,
+                target: self,
+                action: #selector(goToRoot)
+            )
+        
+        title = quizTitle ?? "Quiz"
+        quizDropdown.backgroundColor = .systemGray6
+
+        loadQuestion()
+    }
+
+    func loadQuestion() {
+        guard let quiz = quiz else { return }
+        let question = quiz.getCurrentQuestion()
+        questionLabel.text = question.text
+        selectedAnswerIndex = nil
+
         var actions: [UIAction] = []
 
-        for (index, question) in questions.enumerated() {
-            let action = UIAction(title: question, handler: { _ in
-                print("Selected question \(index): \(question)")
-            })
+        for (index, option) in question.options.enumerated() {
+            let action = UIAction(title: option, state: .off) { [weak self] _ in
+                self?.selectedAnswerIndex = index
+                self?.quizDropdown.setTitle(option, for: .normal)
+            }
             actions.append(action)
         }
-        
-        quizDropdown.menu = UIMenu(title: "", children: actions)
+
+        quizDropdown.menu = UIMenu(title: "Click to Choose an answer", children: actions)
         quizDropdown.showsMenuAsPrimaryAction = true
-       
+        quizDropdown.setTitle("Select Answer", for: .normal)
     }
 
+    @IBAction func onSubmit(_ sender: Any) {
+        guard let quiz = quiz, let selectedIndex = selectedAnswerIndex else { return }
 
-    /*
-    // MARK: - Navigation
+        quiz.answerQuestion(selectedIndex)
 
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        // Get the new view controller using segue.destination.
-        // Pass the selected object to the new view controller.
+        let answerVC = storyboard?.instantiateViewController(withIdentifier: "answerScene") as! AnswerScene
+        answerVC.quiz = quiz
+        answerVC.question = quiz.getCurrentQuestion()
+        answerVC.selectedAnswerIndex = selectedIndex
+        navigationController?.pushViewController(answerVC, animated: true)
     }
-    */
     
-    
+    @objc func goToRoot() {
+        navigationController?.popToRootViewController(animated: true)
+    }
 
 }
+
