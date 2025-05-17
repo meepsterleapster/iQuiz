@@ -1,17 +1,48 @@
 import UIKit
 
-struct QuizTopic {
-    var title: String
-    var desc: String
-    var imageName: String
-    var questions: [Question]
+struct QuizTopic: Codable {
+    let title: String
+    let desc: String
+    let questions: [Question]
+}
+    
+struct Question: Codable {
+    let text: String
+    let answer: Int
+    let answers: [String]
+    
+    enum CodingKeys: String, CodingKey {
+        case text, answer, answers
+    }
+    
+    // 1) Decoder initializer: converts JSON "1" → 0, "2" → 1, etc.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        text    = try container.decode(String.self, forKey: .text)
+        answers = try container.decode([String].self, forKey: .answers)
+        
+        let answerString = try container.decode(String.self, forKey: .answer)
+        guard let oneBased = Int(answerString),
+              oneBased >= 1,
+              oneBased <= answers.count
+        else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .answer,
+                in: container,
+                debugDescription: "Answer string is not a valid 1-based index"
+            )
+        }
+        answer = oneBased - 1
+    }
+    
+    init(text: String, answers: [String], answer: Int) {
+        self.text    = text
+        self.answers = answers
+        self.answer  = answer
+    }
 }
 
-struct Question {
-    var text: String
-    var options: [String]
-    var correctAnswerIndex: Int
-}
+
 
 class CurrentQuiz {
     var questions: [Question]
@@ -27,7 +58,7 @@ class CurrentQuiz {
     }
 
     func answerQuestion(_ userAnswerIndex: Int) {
-        let correctAnswerIndex = questions[currentQuestionIndex].correctAnswerIndex
+        let correctAnswerIndex = questions[currentQuestionIndex].answer
         if userAnswerIndex == correctAnswerIndex {
             score += 1
         }
@@ -46,56 +77,35 @@ class CurrentQuiz {
 }
 
 class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
-
+    
     @IBOutlet weak var quizTable: UITableView!
-
+    
     var quizTopics: [QuizTopic] = []
-
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        quizTopics = ProvidedQuizSingleton.shared.quizTopics
+       quizTable.reloadData()
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         quizTable.delegate = self
         quizTable.dataSource = self
         quizTable.rowHeight = 100
-
-        quizTopics = [
-            QuizTopic(
-                title: "Math",
-                desc: "Sharpen your arithmetic skills!",
-                imageName: "Math",
-                questions: [
-                    Question(text: "What is 7 x 6?", options: ["42", "36", "48", "40"], correctAnswerIndex: 0),
-                    Question(text: "What is the square root of 81?", options: ["9", "8", "7", "6"], correctAnswerIndex: 0)
-                ]
-            ),
-            QuizTopic(
-                title: "Marvel",
-                desc: "Test your Marvel Universe knowledge!",
-                imageName: "Marvel",
-                questions: [
-                    Question(text: "What is the name of Thor’s hammer?", options: ["Stormbreaker", "Gungnir", "Mjolnir", "Excalibur"], correctAnswerIndex: 2),
-                    Question(text: "Who is Tony Stark’s AI assistant?", options: ["Jarvis", "Friday", "Karen", "Ultron"], correctAnswerIndex: 0)
-                ]
-            ),
-            QuizTopic(
-                title: "Science",
-                desc: "Learn about the natural world!",
-                imageName: "Science",
-                questions: [
-                    Question(text: "What is H2O commonly known as?", options: ["Salt", "Hydrogen", "Water", "Oxygen"], correctAnswerIndex: 2),
-                    Question(text: "What force keeps us grounded on Earth?", options: ["Magnetism", "Friction", "Electricity", "Gravity"], correctAnswerIndex: 3)
-                ]
-            )
-        ]
+        quizTopics = ProvidedQuizSingleton.shared.quizTopics
+        quizTable.reloadData()
+        
     }
-
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return quizTopics.count
     }
-
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let topic = quizTopics[indexPath.row]
         let quiz = CurrentQuiz(questions: topic.questions)
-
+        
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         if let questionVC = storyboard.instantiateViewController(withIdentifier: "questionScene") as?  QuestionScene {
             questionVC.quizTitle = topic.title
@@ -103,23 +113,30 @@ class ViewController: UIViewController, UITableViewDelegate, UITableViewDataSour
             self.navigationController?.pushViewController(questionVC, animated: true)
         }
     }
-
+    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = quizTable.dequeueReusableCell(withIdentifier: "quizCell", for: indexPath) as! quizCell
         let topic = quizTopics[indexPath.row]
         cell.quizTitle.text = topic.title
         cell.quizDesc.text = topic.desc
-        cell.quizImage.image = UIImage(named: topic.imageName)
+//        cell.quizImage.image = UIImage(named: topic.imageName)
         return cell
     }
-
+    
     @IBAction func settingButton(_ sender: Any) {
-        let alertController = UIAlertController(
-            title: "Placeholder",
-            message: "Settings go here",
-            preferredStyle: .alert
-        )
-        alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-        self.present(alertController, animated: true, completion: nil)
+        //        let alertController = UIAlertController(
+        //            title: "Placeholder",
+        //            message: "Settings go here",
+        //            preferredStyle: .alert
+        //        )
+        print("Toolbar button tapped")
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        if let settingVC = storyboard.instantiateViewController(withIdentifier: "settingsScene") as?  settingsScene {
+            self.navigationController?.pushViewController(settingVC, animated: true)
+
+        }
+//         alertController.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+//         self.present(alertController, animated: true, completion: nil)
     }
+    
 }

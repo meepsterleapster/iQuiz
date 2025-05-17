@@ -36,7 +36,7 @@ class QuestionScene: UIViewController {
 
         var actions: [UIAction] = []
 
-        for (index, option) in question.options.enumerated() {
+        for (index, option) in question.answers.enumerated() {
             let action = UIAction(title: option, state: .off) { [weak self] _ in
                 self?.selectedAnswerIndex = index
                 self?.quizDropdown.setTitle(option, for: .normal)

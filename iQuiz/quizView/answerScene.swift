@@ -33,8 +33,8 @@ class AnswerScene: UIViewController {
         
         
         questionLabel.text = question.text
-        correctAnswerLabel.text = "Correct Answer: \(question.options[question.correctAnswerIndex])"
-        if selectedAnswerIndex == question.correctAnswerIndex {
+        correctAnswerLabel.text = "Correct Answer: \(question.answers[question.answer])"
+        if selectedAnswerIndex == question.answer {
             resultLabel.text = "You were right!"
             resultLabel.textColor = .systemGreen
         } else {
